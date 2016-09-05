@@ -1,0 +1,4 @@
+[default]
+version = 1.0.4
+files = composer.json
+

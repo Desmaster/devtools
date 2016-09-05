@@ -1,0 +1,73 @@
+#!/usr/bin/env python
+
+import ConfigParser
+import os
+import re
+import shutil
+import sys
+
+def run():
+    if not os.path.isfile(".semver"):
+        print "File .semver doesn't exist!"
+        return
+
+    config = ConfigParser.RawConfigParser()
+    config.read(".semver")
+    files = config.get("default", "files").split(",")
+
+    currentVersion = config.get("default", "version")
+    newVersion = increment(currentVersion)
+    config.set("default", "version", newVersion)
+ 
+    if len(sys.argv) > 1:
+        versionMode = sys.argv[1]
+
+    for filePath in files:
+        parseFile(filePath, currentVersion, newVersion)        
+
+    with open(".semver", "wb") as configfile:
+        config.write(configfile)
+
+def parseFile(filePath, currentVersion, newVersion):
+    backup_path = filePath + '.bak'
+    print 'DBG: creating backup', backup_path
+    shutil.copyfile(filePath, backup_path)
+    
+    with open(filePath) as f:
+        data = f.read()
+
+    with open(filePath, "w") as f:
+        print 'DBG: replacing in file', filePath
+
+        if filePath.endswith("composer.json"):
+            data = re.sub('"version":\s"' + currentVersion + '"', '"version": "' + newVersion + '"', data)
+        
+        f.write(data)    
+
+def increment(version):
+    upgradePart = "patch"
+    
+    if len(sys.argv) > 1:
+        upgradePart = sys.argv[1]
+
+    parts = version.split(".")
+
+    major = int(parts[0])
+    minor = int(parts[1])
+    patch = int(parts[2])
+
+    if (upgradePart == "patch"):
+        patch+=1
+    elif (upgradePart == "minor"):
+        minor+=1
+        patch=0
+    elif (upgradePart == "major"):
+        major+=1
+        minor=0
+        patch=0
+    else:
+        print "No valid version to upgrade"
+
+    return str(major) + "." + str(minor) + "." + str(patch);
+        
+run()
